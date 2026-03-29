@@ -11,101 +11,82 @@ app.use(express.json());
 
 const PORT = 5000;
 
-app.get("/", (req, res) => res.send("MCP Node Server Running 🚀"));
+app.get("/", (req, res) => {
+  res.send("🚀 MCP Node Server Running");
+});
 
+const PYTHON_URL = "http://127.0.0.1:6000/chat";
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`;
+
+// =========================
+// MAIN ROUTE
+// =========================
 app.post("/tool/chat-query", async (req, res) => {
   const { message } = req.body;
-  const msg = message.toLowerCase();
 
   try {
-    // Extract student name
-    let studentName = "";
-    const match = msg.match(/(rahim|karim|ayesha)/i);
-    if (match) studentName = match[1];
+    console.log("User:", message);
 
-    // 👉 ALL STUDENTS
-    if (msg.includes("all student")) {
-      return res.json({
-        message: "All Students: Rahim, Karim, Ayesha",
-      });
+    // =========================
+    // 1️⃣ PYTHON FIRST (DB + LOGIC)
+    // =========================
+    const pyRes = await fetch(PYTHON_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message }),
+    });
+
+    const pyData = await pyRes.json();
+
+    if (pyData?.message && pyData.message !== "NOT_STUDENT_QUERY") {
+      return res.json({ message: pyData.message });
     }
 
-    // 👉 STUDENT RELATED → Python API
-    if (studentName) {
-      const pyRes = await fetch("http://127.0.0.1:6000/predict", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ student_name: studentName }),
-      });
+    // =========================
+    // 2️⃣ GEMINI FALLBACK AI
+    // =========================
+    const geminiRes = await fetch(GEMINI_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: `
+You are an Academic AI Assistant.
 
-      const data = await pyRes.json();
+Rules:
+- If question is about students → answer academically
+- Otherwise give simple helpful answer
 
-      if (data.error) {
-        return res.json({ message: data.error });
-      }
-
-      // CGPA
-      if (msg.includes("cgpa")) {
-        return res.json({
-          message: `Student: ${data.name}
-Predicted CGPA: ${data.predicted_cgpa}
-Needed CGPA: ${data.needed_cgpa}`,
-        });
-      }
-
-      // Weak subjects
-      if (msg.includes("weak") || msg.includes("focus")) {
-        return res.json({
-          message:
-            data.weak_subjects.length > 0
-              ? `Student: ${data.name} should focus on: ${data.weak_subjects.join(", ")}`
-              : `Student: ${data.name} has no weak subjects 👍`,
-        });
-      }
-
-      // Needed CGPA
-      if (msg.includes("how much") || msg.includes("needed")) {
-        return res.json({
-          message:
-            data.needed_cgpa > 0
-              ? `Student ${data.name} needs ${data.needed_cgpa} more CGPA`
-              : `Student ${data.name} already reached target CGPA`,
-        });
-      }
-    }
-    // 👉 GENERAL QUESTION → GEMINI AI 🔥
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: message }],
-            },
-          ],
-        }),
-      },
-    );
+User: ${message}
+                `,
+              },
+            ],
+          },
+        ],
+      }),
+    });
 
     const geminiData = await geminiRes.json();
 
-    console.log("Gemini Response:", geminiData); // DEBUG
+    let aiText = "AI could not respond.";
 
-    const aiText =
-      geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "AI could not respond.";
+    if (geminiData?.candidates?.length > 0) {
+      aiText =
+        geminiData.candidates[0].content.parts
+          .map((p) => p.text)
+          .join(" ") || aiText;
+    }
 
     return res.json({ message: aiText });
   } catch (err) {
-    console.error(err);
+    console.error("Server Error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-app.listen(PORT, () => console.log(`MCP Node Server running on port ${PORT}`));
+app.listen(PORT, () =>
+  console.log(`🚀 MCP Server running on http://localhost:${PORT}`)
+);

@@ -182,10 +182,43 @@ export default function ChatBox() {
         ))}
 
         {loading && (
-          <div style={{ fontSize: "14px", color: "#888" }}>
-            🤖 Thinking...
-          </div>
-        )}
+  <div style={{
+    display: "flex",
+    justifyContent: "flex-start",
+    marginBottom: "12px"
+  }}>
+    <div style={{
+      padding: "10px 14px",
+      borderRadius: "14px",
+      background: "#fff",
+      border: "1px solid #e5e7eb",
+      display: "flex",
+      gap: "6px"
+    }}>
+      <span className="dot"></span>
+      <span className="dot"></span>
+      <span className="dot"></span>
+
+      <style jsx>{`
+        .dot {
+          width: 6px;
+          height: 6px;
+          background: #999;
+          border-radius: 50%;
+          animation: blink 1.4s infinite;
+        }
+
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes blink {
+          0%, 80%, 100% { opacity: 0; }
+          40% { opacity: 1; }
+        }
+      `}</style>
+    </div>
+  </div>
+)}
       </div>
 
       {/* INPUT */}

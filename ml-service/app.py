@@ -1,9 +1,12 @@
 from flask import Flask, request, jsonify
 import psycopg2
+import re
 
 app = Flask(__name__)
 
-# PostgreSQL connection
+# =========================
+# DB CONNECTION
+# =========================
 conn = psycopg2.connect(
     host="localhost",
     database="academic_ai",
@@ -16,38 +19,94 @@ cursor = conn.cursor()
 TARGET_CGPA = 3.5
 WEAK_THRESHOLD = 50
 
-@app.route("/predict", methods=["POST"])
-def predict():
+
+# =========================
+# CLEAN TEXT
+# =========================
+def clean(text):
+    return re.sub(r'[^a-zA-Z\s]', '', text).strip().lower()
+
+
+# =========================
+# MAIN CHAT ROUTE
+# =========================
+@app.route("/chat", methods=["POST"])
+def chat():
     data = request.get_json()
-    student_name = data.get("student_name", "").strip().lower()
-    
-    cursor.execute(
-        "SELECT id, name, cgpa, last_semester_gpa, attendance FROM students WHERE LOWER(name)=LOWER(%s)",
-        (student_name,)
-    )
-    student = cursor.fetchone()
-    if not student:
-        return jsonify({"error": f"Student {student_name} not found"})
-    
-    student_id, name, cgpa, last_gpa, attendance = student
-    predicted_cgpa = round(cgpa + 0.1, 2)  # placeholder ML logic
+    msg = clean(data.get("message", ""))
 
-    cursor.execute(
-        "SELECT subject_name, marks FROM subjects WHERE student_id=%s", (student_id,)
-    )
-    weak_subjects = [row[0] for row in cursor.fetchall() if row[1] < WEAK_THRESHOLD]
+    # =========================
+    # 1️⃣ ALL STUDENTS
+    # =========================
+    if "all" in msg and "student" in msg:
+        cursor.execute("SELECT name FROM students")
+        students = [row[0] for row in cursor.fetchall()]
 
-    needed_cgpa = round(TARGET_CGPA - cgpa, 2)
-    if needed_cgpa < 0:
-        needed_cgpa = 0.0
+        return jsonify({
+            "message": f"All Students: {', '.join(students)}"
+        })
 
+    # =========================
+    # 2️⃣ FIND STUDENT
+    # =========================
+    cursor.execute("SELECT id, name, cgpa FROM students")
+    all_students = cursor.fetchall()
+
+    student = None
+
+    for s in all_students:
+        if s[1].lower() in msg:
+            student = s
+            break
+
+    # =========================
+    # 3️⃣ STUDENT LOGIC
+    # =========================
+    if student:
+        sid, name, cgpa = student
+
+        # fake ML (you can upgrade later)
+        predicted = round(cgpa + 0.1, 2)
+
+        # weak subjects
+        cursor.execute(
+            "SELECT subject_name, marks FROM subjects WHERE student_id=%s",
+            (sid,)
+        )
+
+        weak = [
+            row[0] for row in cursor.fetchall()
+            if row[1] < WEAK_THRESHOLD
+        ]
+
+        needed = round(TARGET_CGPA - cgpa, 2)
+        if needed < 0:
+            needed = 0
+
+        if "cgpa" in msg:
+            return jsonify({
+                "message": f"{name} CGPA: {predicted}, Needed: {needed}"
+            })
+
+        if "weak" in msg or "focus" in msg:
+            return jsonify({
+                "message": f"{name} weak subjects: {', '.join(weak)}" if weak else f"{name} has no weak subjects"
+            })
+
+        return jsonify({
+            "message": f"{name} → CGPA: {predicted}, Needed: {needed}"
+        })
+
+    # =========================
+    # 4️⃣ NOT STUDENT QUERY
+    # =========================
     return jsonify({
-        "name": name,
-        "predicted_cgpa": predicted_cgpa,
-        "weak_subjects": weak_subjects,
-        "needed_cgpa": needed_cgpa
+        "message": "NOT_STUDENT_QUERY"
     })
 
 
+# =========================
+# RUN SERVER
+# =========================
 if __name__ == "__main__":
     app.run(port=6000)
