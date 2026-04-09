@@ -143,6 +143,7 @@ curl -X POST http://127.0.0.1:6000/predict \
 * psycopg2
 * REST API
 
+
 ---
 
 ## ⚠️ Notes

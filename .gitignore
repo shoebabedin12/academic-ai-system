@@ -42,21 +42,10 @@ next-env.d.ts
 
 
 
-client/.env.live
 node_modules
 dist/
-@generated
 static/
 .env
-hadithbd/.env.prod
-hadithbd/logs/
-hadithbd/prisma/db/
-greentech/.env.prod
-greentech/logs/
-greentech/prisma/db/
-hadith-api/
-client-backup/
-styles/
+
 package-lock.json
 package.json
-nuxt/
