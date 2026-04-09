@@ -16,7 +16,7 @@ app.get("/", (req, res) => {
   res.send("🚀 MCP Node Server Running");
 });
 
-const PYTHON_URL = "http://127.0.0.1:6000/chat";
+const PYTHON_URL = "https://academic-ai-system.onrender.com/chat" || "http://127.0.0.1:6000/chat";
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
 // =========================

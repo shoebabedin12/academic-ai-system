@@ -80,9 +80,10 @@ export default function ChatBox() {
     const userMsg: Message = { sender: "user", text: input };
     setMessages(prev => [...prev, userMsg]);
     setLoading(true);
+    const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/tool/chat-query";
 
     try {
-      const res = await fetch("http://localhost:5000/tool/chat-query", {
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: input }),
