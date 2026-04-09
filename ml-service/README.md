@@ -83,6 +83,9 @@ DB_PORT=5432
 ```bash
 python app.py
 ```
+```for flask run
+flask run
+```
 
 Server will start at:
 
