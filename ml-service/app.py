@@ -165,6 +165,6 @@ def chat():
 # if __name__ == "__main__":
 #     app.run(port=6000)
 
+port = int(os.environ.get("PORT", 6000))
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=port, debug=True)
-port = int(os.environ.get("PORT", 6000))
