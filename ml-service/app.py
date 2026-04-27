@@ -135,14 +135,18 @@ def chat():
 def semester():
     data = request.get_json()
     msg = clean(data.get("message", ""))
+    student_name = data.get("student_name", "")
 
     try:
         cursor.execute("SELECT id, name, cgpa FROM students")
         all_students = cursor.fetchall()
-        student = find_student(msg, all_students)
+
+        # ✅ student_name আগে try করুন
+        search = student_name if student_name else msg
+        student = find_student(search, all_students)
 
         if not student:
-            return jsonify({"message": "Student not found"})
+            return jsonify({"message": f"'{search}' নামে কোনো student পাওয়া যায়নি"})
 
         sid, name, _ = student
 
@@ -153,19 +157,19 @@ def semester():
         rows = cursor.fetchall()
 
         if not rows:
-            return jsonify({"message": f"{name} has no semester data"})
+            return jsonify({"message": f"{name} এর কোনো semester data নেই"})
 
         data_points = [{"semester": r[0], "cgpa": float(r[1])} for r in rows]
 
         return jsonify({
             "student": name,
             "semesters": data_points,
-            "message": f"{name} এর semester data পাওয়া গেছে"
+            "message": f"📊 {name} এর semester chart নিচে দেখুন"
         })
 
     except Exception as e:
-        conn.rollback()  # ✅ error হলে rollback করুন
-        print("Semester error:", e)
+        conn.rollback()
+        print("Semester Error:", str(e))
         return jsonify({"message": f"Error: {str(e)}"}), 500
 
 

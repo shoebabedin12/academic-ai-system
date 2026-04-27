@@ -25,9 +25,11 @@ app.post("/tool/chat-query", async (req, res) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: `
+        contents: [
+          {
+            parts: [
+              {
+                text: `
 You are an academic assistant intent detector.
 Analyze the user message and return ONLY a JSON object. No extra text.
 
@@ -47,15 +49,19 @@ Examples:
 - "Karim semester chart" → intent: "semester_chart", student_name: "Karim"
 - "all student result" → intent: "all_results"
 - "what is 2+2" → intent: "general"
-            `
-          }]
-        }]
-      })
+            `,
+              },
+            ],
+          },
+        ],
+      }),
     });
 
     const intentData = await intentRes.json();
-    let intentText = intentData.candidates[0].content.parts.map(p => p.text).join("");
-    
+    let intentText = intentData.candidates[0].content.parts
+      .map((p) => p.text)
+      .join("");
+
     // JSON parse করুন
     intentText = intentText.replace(/```json|```/g, "").trim();
     const intent = JSON.parse(intentText);
@@ -74,12 +80,20 @@ Examples:
     const pyRes = await fetch(`${process.env.PYTHON_API_URL}${pyEndpoint}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         message: pyMessage,
         intent: intent.intent,
-        student_name: intent.student_name
+        student_name: intent.student_name,
       }),
     });
+
+    // ✅ JSON parse এর আগে content-type check করুন
+    const contentType = pyRes.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      const text = await pyRes.text();
+      console.error("Flask returned non-JSON:", text.substring(0, 200));
+      return res.json({ message: "Student data fetch করতে সমস্যা হয়েছে।" });
+    }
 
     const pyData = await pyRes.json();
 
@@ -88,7 +102,7 @@ Examples:
       return res.json({
         message: `📊 ${pyData.student} এর semester chart নিচে দেখুন`,
         student: pyData.student,
-        semesters: pyData.semesters
+        semesters: pyData.semesters,
       });
     }
 
@@ -102,14 +116,15 @@ Examples:
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: message }] }]
-      })
+        contents: [{ parts: [{ text: message }] }],
+      }),
     });
     const geminiData = await geminiRes.json();
-    const aiText = geminiData.candidates[0].content.parts.map(p => p.text).join(" ");
-    
-    return res.json({ message: aiText });
+    const aiText = geminiData.candidates[0].content.parts
+      .map((p) => p.text)
+      .join(" ");
 
+    return res.json({ message: aiText });
   } catch (err) {
     console.error("Server Error:", err);
     res.status(500).json({ message: "Server error" });
@@ -143,7 +158,7 @@ app.post("/admin/add-student", async (req, res) => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(req.body),
-      }
+      },
     );
     const data = await pyRes.json();
     res.status(pyRes.ok ? 200 : 500).json(data);
@@ -151,6 +166,5 @@ app.post("/admin/add-student", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-
 
 app.listen(PORT, () => console.log(`🚀 MCP Server running on port ${PORT}`));
