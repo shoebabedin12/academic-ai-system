@@ -16,7 +16,6 @@ const PYTHON_URL = process.env.PYTHON_API_URL
   : "http://127.0.0.1:6000/chat";
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
-
 app.post("/tool/chat-query", async (req, res) => {
   const { message } = req.body;
 
@@ -97,5 +96,6 @@ app.post("/tool/semester-chart", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
 
 app.listen(PORT, () => console.log(`🚀 MCP Server running on port ${PORT}`));
