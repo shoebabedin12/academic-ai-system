@@ -73,6 +73,21 @@ app.post("/tool/chat-query", async (req, res) => {
   }
 });
 
+app.post("/tool/semester-chart", async (req, res) => {
+  const { message } = req.body;
+  try {
+    const pyRes = await fetch(`${process.env.PYTHON_API_URL}/semester` || "http://127.0.0.1:6000/semester", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message }),
+    });
+    const data = await pyRes.json();
+    return res.json(data);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 app.listen(PORT, () =>
   console.log(`🚀 MCP Server running on port ${PORT}`)
 );

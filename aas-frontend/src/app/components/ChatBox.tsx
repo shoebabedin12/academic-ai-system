@@ -1,6 +1,7 @@
 "use client"
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import SemesterChart from "./SemesterChart";
 
 interface Message {
   sender: "user" | "bot";
@@ -13,6 +14,8 @@ export default function ChatBox() {
   const [loading, setLoading] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
+  const [chartStudent, setChartStudent] = useState("");
+
 
   // Load messages from localStorage
   useEffect(() => {
@@ -81,7 +84,7 @@ export default function ChatBox() {
     setMessages(prev => [...prev, userMsg]);
     setLoading(true);
     const url = `${process.env.NEXT_PUBLIC_API_URL}/tool/chat-query` || "http://localhost:5000/tool/chat-query";
-console.log("API URL:", url);
+    console.log("API URL:", url);
     try {
       const res = await fetch(url, {
         method: "POST",
@@ -89,6 +92,10 @@ console.log("API URL:", url);
         body: JSON.stringify({ message: input }),
       });
       const data = await res.json();
+
+      if (data.student) {
+        setChartStudent(data.student);
+      }
 
       // Start typing animation for bot
       typeMessage(data.message, () => setLoading(false));
@@ -101,7 +108,7 @@ console.log("API URL:", url);
     setInput("");
   };
 
-  
+
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") sendMessage();
@@ -185,24 +192,24 @@ console.log("API URL:", url);
         ))}
 
         {loading && (
-  <div style={{
-    display: "flex",
-    justifyContent: "flex-start",
-    marginBottom: "12px"
-  }}>
-    <div style={{
-      padding: "10px 14px",
-      borderRadius: "14px",
-      background: "#fff",
-      border: "1px solid #e5e7eb",
-      display: "flex",
-      gap: "6px"
-    }}>
-      <span className="dot"></span>
-      <span className="dot"></span>
-      <span className="dot"></span>
+          <div style={{
+            display: "flex",
+            justifyContent: "flex-start",
+            marginBottom: "12px"
+          }}>
+            <div style={{
+              padding: "10px 14px",
+              borderRadius: "14px",
+              background: "#fff",
+              border: "1px solid #e5e7eb",
+              display: "flex",
+              gap: "6px"
+            }}>
+              <span className="dot"></span>
+              <span className="dot"></span>
+              <span className="dot"></span>
 
-      <style jsx>{`
+              <style jsx>{`
         .dot {
           width: 6px;
           height: 6px;
@@ -219,9 +226,11 @@ console.log("API URL:", url);
           40% { opacity: 1; }
         }
       `}</style>
-    </div>
-  </div>
-)}
+            </div>
+          </div>
+        )}
+
+        {chartStudent && <SemesterChart studentName={chartStudent} />}
       </div>
 
       {/* INPUT */}

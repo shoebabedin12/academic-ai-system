@@ -159,6 +159,37 @@ def chat():
     })
 
 
+
+@app.route("/semester", methods=["POST"])
+def semester():
+    data = request.get_json()
+    msg = clean(data.get("message", ""))
+
+    cursor.execute("SELECT id, name, cgpa FROM students")
+    all_students = cursor.fetchall()
+    student = find_student(msg, all_students)
+
+    if not student:
+        return jsonify({"message": "NOT_STUDENT_QUERY"})
+
+    sid, name, _ = student
+
+    cursor.execute(
+        "SELECT semester, cgpa FROM semester_results WHERE student_id=%s ORDER BY semester",
+        (sid,)
+    )
+    rows = cursor.fetchall()
+
+    if not rows:
+        return jsonify({"message": f"{name} has no semester data"})
+
+    data_points = [{"semester": r[0], "cgpa": float(r[1])} for r in rows]
+
+    return jsonify({
+        "student": name,
+        "semesters": data_points
+    })
+
 # =========================
 # RUN SERVER
 # =========================
