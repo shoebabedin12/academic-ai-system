@@ -80,7 +80,7 @@ export default function ChatBox() {
     const userMsg: Message = { sender: "user", text: input };
     setMessages(prev => [...prev, userMsg]);
     setLoading(true);
-    const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/tool/chat-query";
+    const url = `${process.env.NEXT_PUBLIC_API_URL}/tool/chat-query` || "http://localhost:5000/tool/chat-query";
 console.log("API URL:", url);
     try {
       const res = await fetch(url, {
