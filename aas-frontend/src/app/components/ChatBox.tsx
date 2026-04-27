@@ -233,7 +233,9 @@ export default function ChatBox() {
           </div>
         )}
       </div>
-
+      {chartStudent && (
+        <SemesterChart studentName={chartStudent} semesters={chartSemesters} />
+      )}
       {/* INPUT */}
       <div style={{
         display: "flex",
@@ -274,9 +276,6 @@ export default function ChatBox() {
           Send
         </button>
       </div>
-      {chartStudent && (
-        <SemesterChart studentName={chartStudent} semesters={chartSemesters} />
-      )}
     </div>
   );
 }
