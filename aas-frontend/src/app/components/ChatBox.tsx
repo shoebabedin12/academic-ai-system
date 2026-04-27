@@ -123,159 +123,155 @@ export default function ChatBox() {
   };
 
   return (
-    <div style={{
-      minWidth: "700px",
-      maxWidth: "700px",
-      margin: "40px auto",
-      fontFamily: "Inter, sans-serif",
-      display: "flex",
-      flexDirection: "column",
-      height: "80vh",
-      border: "1px solid #e5e7eb",
-      borderRadius: "12px",
-      overflow: "hidden",
-      boxShadow: "0 4px 20px rgba(0,0,0,0.05)"
-    }}>
-      {/* HEADER */}
+    <div>
       <div style={{
-        padding: "12px 16px",
-        borderBottom: "1px solid #eee",
-        fontWeight: "600",
-        background: "#ffffff",
+        minWidth: "700px",
+        maxWidth: "700px",
+        margin: "40px auto",
+        fontFamily: "Inter, sans-serif",
         display: "flex",
-        justifyContent: "space-between",
-        color: "#4cbe7f"
+        flexDirection: "column",
+        height: "80vh",
+        border: "1px solid #e5e7eb",
+        borderRadius: "12px",
+        overflow: "hidden",
+        boxShadow: "0 4px 20px rgba(0,0,0,0.05)"
       }}>
-        🎓 Academic AI Assistant
-        <button onClick={clearChat} style={{
-          fontSize: "12px",
-          border: "none",
-          background: "#eee",
-          padding: "4px 8px",
-          borderRadius: "6px",
-          cursor: "pointer"
+        {/* HEADER */}
+        <div style={{
+          padding: "12px 16px",
+          borderBottom: "1px solid #eee",
+          fontWeight: "600",
+          background: "#ffffff",
+          display: "flex",
+          justifyContent: "space-between",
+          color: "#4cbe7f"
         }}>
-          Clear
-        </button>
-      </div>
-
-      {/* CHAT BODY */}
-      <div
-        ref={chatContainerRef}
-        onScroll={handleScroll}
-        style={{
-          flex: 1,
-          padding: "20px",
-          overflowY: "auto",
-          background: "#f9fafb"
-        }}
-      >
-        {messages.map((msg, i) => (
-          <div
-            key={i}
-            style={{
+          🎓 Academic AI Assistant
+          <button onClick={clearChat} style={{
+            fontSize: "12px",
+            border: "none",
+            background: "#eee",
+            padding: "4px 8px",
+            borderRadius: "6px",
+            cursor: "pointer"
+          }}>
+            Clear
+          </button>
+        </div>
+        {/* CHAT BODY */}
+        <div
+          ref={chatContainerRef}
+          onScroll={handleScroll}
+          style={{
+            flex: 1,
+            padding: "20px",
+            overflowY: "auto",
+            background: "#f9fafb"
+          }}
+        >
+          {messages.map((msg, i) => (
+            <div
+              key={i}
+              style={{
+                display: "flex",
+                justifyContent: msg.sender === "user" ? "flex-end" : "flex-start",
+                marginBottom: "12px"
+              }}
+            >
+              <div style={{
+                padding: "10px 14px",
+                borderRadius: "14px",
+                maxWidth: "75%",
+                background: msg.sender === "user" ? "#4cbe7f" : "#ffffff",
+                color: msg.sender === "user" ? "#fff" : "#111",
+                border: msg.sender === "bot" ? "1px solid #e5e7eb" : "none",
+                whiteSpace: "pre-line",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.05)"
+              }}>
+                <ReactMarkdown>{msg.text}</ReactMarkdown>
+              </div>
+            </div>
+          ))}
+          {loading && (
+            <div style={{
               display: "flex",
-              justifyContent: msg.sender === "user" ? "flex-end" : "flex-start",
+              justifyContent: "flex-start",
               marginBottom: "12px"
+            }}>
+              <div style={{
+                padding: "10px 14px",
+                borderRadius: "14px",
+                background: "#fff",
+                border: "1px solid #e5e7eb",
+                display: "flex",
+                gap: "6px"
+              }}>
+                <span className="dot"></span>
+                <span className="dot"></span>
+                <span className="dot"></span>
+                <style jsx>{`
+          .dot {
+            width: 6px;
+            height: 6px;
+            background: #999;
+            border-radius: 50%;
+            animation: blink 1.4s infinite;
+          }
+          .dot:nth-child(2) { animation-delay: 0.2s; }
+          .dot:nth-child(3) { animation-delay: 0.4s; }
+          @keyframes blink {
+            0%, 80%, 100% { opacity: 0; }
+            40% { opacity: 1; }
+          }
+        `}</style>
+              </div>
+            </div>
+          )}
+        </div>
+        {/* INPUT */}
+        <div style={{
+          display: "flex",
+          padding: "12px",
+          borderTop: "1px solid #eee",
+          background: "#fff",
+        }}>
+          <input
+            type="text"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Ask anything..."
+            style={{
+              flex: 1,
+              padding: "12px",
+              borderRadius: "10px",
+              border: "1px solid #ddd",
+              outline: "none",
+              color: "#111"
+            }}
+            disabled={loading}
+          />
+          <button
+            onClick={sendMessage}
+            disabled={loading}
+            style={{
+              marginLeft: "10px",
+              padding: "0 18px",
+              borderRadius: "10px",
+              border: "none",
+              background: "#4cbe7f",
+              color: "#fff",
+              cursor: "pointer"
             }}
           >
-            <div style={{
-              padding: "10px 14px",
-              borderRadius: "14px",
-              maxWidth: "75%",
-              background: msg.sender === "user" ? "#4cbe7f" : "#ffffff",
-              color: msg.sender === "user" ? "#fff" : "#111",
-              border: msg.sender === "bot" ? "1px solid #e5e7eb" : "none",
-              whiteSpace: "pre-line",
-              boxShadow: "0 2px 6px rgba(0,0,0,0.05)"
-            }}>
-              <ReactMarkdown>{msg.text}</ReactMarkdown>
-            </div>
-          </div>
-        ))}
-
-        {loading && (
-          <div style={{
-            display: "flex",
-            justifyContent: "flex-start",
-            marginBottom: "12px"
-          }}>
-            <div style={{
-              padding: "10px 14px",
-              borderRadius: "14px",
-              background: "#fff",
-              border: "1px solid #e5e7eb",
-              display: "flex",
-              gap: "6px"
-            }}>
-              <span className="dot"></span>
-              <span className="dot"></span>
-              <span className="dot"></span>
-
-              <style jsx>{`
-        .dot {
-          width: 6px;
-          height: 6px;
-          background: #999;
-          border-radius: 50%;
-          animation: blink 1.4s infinite;
-        }
-
-        .dot:nth-child(2) { animation-delay: 0.2s; }
-        .dot:nth-child(3) { animation-delay: 0.4s; }
-
-        @keyframes blink {
-          0%, 80%, 100% { opacity: 0; }
-          40% { opacity: 1; }
-        }
-      `}</style>
-            </div>
-          </div>
-        )}
+            Send
+          </button>
+        </div>
       </div>
       {chartStudent && (
         <SemesterChart studentName={chartStudent} semesters={chartSemesters} />
       )}
-      {/* INPUT */}
-      <div style={{
-        display: "flex",
-        padding: "12px",
-        borderTop: "1px solid #eee",
-        background: "#fff",
-      }}>
-        <input
-          type="text"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder="Ask anything..."
-          style={{
-            flex: 1,
-            padding: "12px",
-            borderRadius: "10px",
-            border: "1px solid #ddd",
-            outline: "none",
-            color: "#111"
-          }}
-          disabled={loading}
-        />
-
-        <button
-          onClick={sendMessage}
-          disabled={loading}
-          style={{
-            marginLeft: "10px",
-            padding: "0 18px",
-            borderRadius: "10px",
-            border: "none",
-            background: "#4cbe7f",
-            color: "#fff",
-            cursor: "pointer"
-          }}
-        >
-          Send
-        </button>
-      </div>
     </div>
   );
 }
