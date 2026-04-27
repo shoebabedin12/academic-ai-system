@@ -6,6 +6,10 @@ import SemesterChart from "./SemesterChart";
 interface Message {
   sender: "user" | "bot";
   text: string;
+  chart?: {
+    student: string;
+    semesters: { semester: number; cgpa: number }[];
+  };
 }
 
 export default function ChatBox() {
@@ -96,12 +100,23 @@ export default function ChatBox() {
       const data = await res.json();
 
       if (data.student && data.semesters) {
+        // ✅ chart state এ রাখুন (typing শেষে message এ add হবে)
         setChartStudent(data.student);
         setChartSemesters(data.semesters);
       }
 
+
       // Start typing animation for bot
-      typeMessage(data.message, () => setLoading(false));
+      if (data.semesters) {
+        setMessages(prev => [...prev, {
+          sender: "bot",
+          text: data.message,
+          chart: { student: data.student, semesters: data.semesters }
+        }]);
+        setLoading(false);
+      } else {
+        typeMessage(data.message, () => setLoading(false));
+      }
 
     } catch (err) {
       setMessages(prev => [...prev, { sender: "bot", text: "Server error. Please try again." }]);
@@ -148,16 +163,29 @@ export default function ChatBox() {
           color: "#4cbe7f"
         }}>
           🎓 Academic AI Assistant
-          <button onClick={clearChat} style={{
-            fontSize: "12px",
-            border: "none",
-            background: "#eee",
-            padding: "4px 8px",
-            borderRadius: "6px",
-            cursor: "pointer"
-          }}>
-            Clear
-          </button>
+          <div className="flex items-center gap-x-4">
+            <button onClick={clearChat} style={{
+              fontSize: "12px",
+              border: "none",
+              background: "#eee",
+              padding: "4px 8px",
+              borderRadius: "6px",
+              cursor: "pointer"
+            }}>
+              Clear
+            </button>
+            <a href="/admin" style={{
+              fontSize: "12px",
+              padding: "4px 8px",
+              borderRadius: "6px",
+              background: "#4cbe7f",
+              color: "#fff",
+              textDecoration: "none",
+              marginRight: "8px"
+            }}>
+              + Add Student
+            </a>
+          </div>
         </div>
         {/* CHAT BODY */}
         <div
@@ -171,14 +199,13 @@ export default function ChatBox() {
           }}
         >
           {messages.map((msg, i) => (
-            <div
-              key={i}
-              style={{
-                display: "flex",
-                justifyContent: msg.sender === "user" ? "flex-end" : "flex-start",
-                marginBottom: "12px"
-              }}
-            >
+            <div key={i} style={{
+              display: "flex",
+              flexDirection: "column",  // ✅ column করুন
+              alignItems: msg.sender === "user" ? "flex-end" : "flex-start",
+              marginBottom: "12px"
+            }}>
+              {/* Text bubble */}
               <div style={{
                 padding: "10px 14px",
                 borderRadius: "14px",
@@ -191,6 +218,16 @@ export default function ChatBox() {
               }}>
                 <ReactMarkdown>{msg.text}</ReactMarkdown>
               </div>
+
+              {/* ✅ Chart — ওই message এর নিচে, full width */}
+              {msg.chart && (
+                <div style={{ width: "100%", marginTop: "8px" }}>
+                  <SemesterChart
+                    studentName={msg.chart.student}
+                    semesters={msg.chart.semesters}
+                  />
+                </div>
+              )}
             </div>
           ))}
           {loading && (
@@ -269,9 +306,6 @@ export default function ChatBox() {
           </button>
         </div>
       </div>
-      {chartStudent && (
-        <SemesterChart studentName={chartStudent} semesters={chartSemesters} />
-      )}
     </div>
   );
 }

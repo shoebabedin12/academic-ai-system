@@ -131,9 +131,6 @@ def chat():
         return jsonify({"message": f"Error: {str(e)}"}), 500
 
 
-# app.py তে semester route এ cursor problem হতে পারে
-# এভাবে করুন:
-
 @app.route("/semester", methods=["POST"])
 def semester():
     data = request.get_json()
@@ -171,6 +168,60 @@ def semester():
         print("Semester error:", e)
         return jsonify({"message": f"Error: {str(e)}"}), 500
 
+
+@app.route("/admin/add-student", methods=["POST"])
+def add_student():
+    data = request.get_json()
+    try:
+        # Student insert
+        cursor.execute(
+            "INSERT INTO students (name, cgpa) VALUES (%s, %s) RETURNING id",
+            (data["name"], data["cgpa"])
+        )
+        sid = cursor.fetchone()[0]
+
+        # Subjects insert
+        for sub in data.get("subjects", []):
+            cursor.execute(
+                "INSERT INTO subjects (student_id, subject_name, marks) VALUES (%s, %s, %s)",
+                (sid, sub["name"], sub["marks"])
+            )
+
+        # Semesters insert
+        for sem in data.get("semesters", []):
+            cursor.execute(
+                "INSERT INTO semester_results (student_id, semester, cgpa) VALUES (%s, %s, %s)",
+                (sid, sem["semester"], sem["cgpa"])
+            )
+
+        conn.commit()
+        return jsonify({"message": f"✅ {data['name']} successfully added!", "id": sid})
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"message": f"Error: {str(e)}"}), 500
+
+
+
+@app.route("/admin/all-data", methods=["GET"])
+def all_data():
+    cursor.execute("""
+        SELECT s.id, s.name, s.cgpa,
+               json_agg(DISTINCT jsonb_build_object('subject', sub.subject_name, 'marks', sub.marks)) as subjects,
+               json_agg(DISTINCT jsonb_build_object('semester', sr.semester, 'cgpa', sr.cgpa)) as semesters
+        FROM students s
+        LEFT JOIN subjects sub ON s.id = sub.student_id
+        LEFT JOIN semester_results sr ON s.id = sr.student_id
+        GROUP BY s.id, s.name, s.cgpa
+    """)
+    rows = cursor.fetchall()
+    result = []
+    for r in rows:
+        result.append({
+            "id": r[0], "name": r[1], "cgpa": float(r[2]),
+            "subjects": r[3], "semesters": r[4]
+        })
+    return jsonify(result)
 # =========================
 # RUN SERVER
 # =========================

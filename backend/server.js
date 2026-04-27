@@ -135,5 +135,22 @@ app.post("/tool/semester-chart", async (req, res) => {
   }
 });
 
+app.post("/admin/add-student", async (req, res) => {
+  try {
+    const pyRes = await fetch(
+      `${process.env.PYTHON_API_URL}/admin/add-student`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(req.body),
+      }
+    );
+    const data = await pyRes.json();
+    res.status(pyRes.ok ? 200 : 500).json(data);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 
 app.listen(PORT, () => console.log(`🚀 MCP Server running on port ${PORT}`));
