@@ -81,7 +81,7 @@ export default function ChatBox() {
     setMessages(prev => [...prev, userMsg]);
     setLoading(true);
     const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/tool/chat-query";
-
+console.log("API URL:", url);
     try {
       const res = await fetch(url, {
         method: "POST",
@@ -100,6 +100,8 @@ export default function ChatBox() {
 
     setInput("");
   };
+
+  
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") sendMessage();
