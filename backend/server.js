@@ -20,58 +20,96 @@ app.post("/tool/chat-query", async (req, res) => {
   const { message } = req.body;
 
   try {
-    if (
-      message.toLowerCase().includes("semester") ||
-      message.toLowerCase().includes("chart")
-    ) {
-      const pyRes = await fetch(
-        `${process.env.PYTHON_API_URL}/semester` ||
-          "http://127.0.0.1:6000/semester",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message }),
-        },
-      );
-      const data = await pyRes.json();
-
-      if (data.student) {
-        return res.json({
-          message: `📊 ${data.student} এর semester chart নিচে দেখুন`,
-          student: data.student,
-          semesters: data.semesters,
-        });
-      }
-    }
-
-    // বাকি আগের code...
-    const pyRes = await fetch(PYTHON_URL, {
+    // ✅ Step 1: Gemini দিয়ে intent বোঝো
+    const intentRes = await fetch(GEMINI_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: `
+You are an academic assistant intent detector.
+Analyze the user message and return ONLY a JSON object. No extra text.
+
+User message: "${message}"
+
+Return this exact format:
+{
+  "intent": "all_students" | "student_result" | "student_cgpa" | "weak_subjects" | "semester_chart" | "all_results" | "general",
+  "student_name": "name or null",
+  "extra": "any extra info or null"
+}
+
+Examples:
+- "show me all students" → intent: "all_students"
+- "Rahim er result" → intent: "student_result", student_name: "Rahim"
+- "who is weak in math" → intent: "weak_subjects"  
+- "Karim semester chart" → intent: "semester_chart", student_name: "Karim"
+- "all student result" → intent: "all_results"
+- "what is 2+2" → intent: "general"
+            `
+          }]
+        }]
+      })
     });
+
+    const intentData = await intentRes.json();
+    let intentText = intentData.candidates[0].content.parts.map(p => p.text).join("");
+    
+    // JSON parse করুন
+    intentText = intentText.replace(/```json|```/g, "").trim();
+    const intent = JSON.parse(intentText);
+
+    console.log("Detected intent:", intent);
+
+    // ✅ Step 2: Intent অনুযায়ী Python Flask এ call করো
+    let pyEndpoint = "/chat";
+    let pyMessage = message;
+
+    if (intent.intent === "semester_chart") {
+      pyEndpoint = "/semester";
+      pyMessage = intent.student_name || message;
+    }
+
+    const pyRes = await fetch(`${process.env.PYTHON_API_URL}${pyEndpoint}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        message: pyMessage,
+        intent: intent.intent,
+        student_name: intent.student_name
+      }),
+    });
+
     const pyData = await pyRes.json();
 
+    // ✅ Semester chart data
+    if (pyData.semesters) {
+      return res.json({
+        message: `📊 ${pyData.student} এর semester chart নিচে দেখুন`,
+        student: pyData.student,
+        semesters: pyData.semesters
+      });
+    }
+
+    // ✅ Student data পেলে return করো
     if (pyData?.message && pyData.message !== "NOT_STUDENT_QUERY") {
       return res.json({ message: pyData.message });
     }
 
-    // Gemini fallback...
+    // ✅ General question — Gemini দিয়ে উত্তর দাও
     const geminiRes = await fetch(GEMINI_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: `User: ${message}` }] }],
-      }),
+        contents: [{ parts: [{ text: message }] }]
+      })
     });
     const geminiData = await geminiRes.json();
-    let aiText = "AI could not respond.";
-    if (geminiData?.candidates?.length > 0) {
-      aiText = geminiData.candidates[0].content.parts
-        .map((p) => p.text)
-        .join(" ");
-    }
+    const aiText = geminiData.candidates[0].content.parts.map(p => p.text).join(" ");
+    
     return res.json({ message: aiText });
+
   } catch (err) {
     console.error("Server Error:", err);
     res.status(500).json({ message: "Server error" });

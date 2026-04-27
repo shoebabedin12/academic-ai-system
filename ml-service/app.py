@@ -70,94 +70,65 @@ def find_student(msg, students):
 def chat():
     data = request.get_json()
     msg = clean(data.get("message", ""))
+    intent = data.get("intent", "")  # ✅ Node থেকে intent নিন
+    student_name = data.get("student_name", "")
 
-    # =========================
-    # 1️⃣ ALL STUDENTS
-    # =========================
-    if "all" in msg and "student" in msg:
-        cursor.execute("SELECT name FROM students")
-        students = [row[0] for row in cursor.fetchall()]
+    try:
+        # ✅ Intent based routing — keyword match লাগবে না!
+        if intent == "all_students":
+            cursor.execute("SELECT name FROM students")
+            students = [row[0] for row in cursor.fetchall()]
+            return jsonify({"message": f"All Students:\n" + "\n".join(f"• {s}" for s in students)})
 
-        return jsonify({
-            "message": f"All Students: {', '.join(students)}"
-        })
+        if intent == "all_results":
+            cursor.execute("""
+                SELECT s.name, s.cgpa,
+                       COALESCE(string_agg(sub.subject_name || ': ' || sub.marks::text, ', '), 'No subjects') as subjects
+                FROM students s
+                LEFT JOIN subjects sub ON s.id = sub.student_id
+                GROUP BY s.id, s.name, s.cgpa ORDER BY s.name
+            """)
+            rows = cursor.fetchall()
+            result_text = "\n".join([f"**{r[0]}** → CGPA: {r[1]} | {r[2]}" for r in rows])
+            return jsonify({"message": result_text})
 
-    # =========================
-    # 2️⃣ GET ALL STUDENTS
-    # =========================
-    cursor.execute("SELECT id, name, cgpa FROM students")
-    all_students = cursor.fetchall()
+        # ✅ Student specific queries
+        cursor.execute("SELECT id, name, cgpa FROM students")
+        all_students = cursor.fetchall()
+        
+        # student_name আগে check করো, তারপর msg
+        search = student_name if student_name else msg
+        student = find_student(search, all_students)
 
-    student = find_student(msg, all_students)
+        if student:
+            sid, name, cgpa = student
+            predicted = round(cgpa + 0.1, 2)
+            needed = max(round(TARGET_CGPA - cgpa, 2), 0)
 
-    # =========================
-    # 3️⃣ STUDENT LOGIC
-    # =========================
-    if student:
-        sid, name, cgpa = student
+            cursor.execute("SELECT subject_name, marks FROM subjects WHERE student_id=%s", (sid,))
+            subjects = cursor.fetchall()
+            weak = [s[0] for s in subjects if s[1] < WEAK_THRESHOLD]
 
-        predicted = round(cgpa + 0.1, 2)
-
-        # fetch subjects
-        cursor.execute(
-            "SELECT subject_name, marks FROM subjects WHERE student_id=%s",
-            (sid,)
-        )
-        subjects = cursor.fetchall()
-
-        # weak subjects
-        weak = [s[0] for s in subjects if s[1] < WEAK_THRESHOLD]
-
-        # needed CGPA
-        needed = round(TARGET_CGPA - cgpa, 2)
-        if needed < 0:
-            needed = 0
-
-        # =========================
-        # SUBJECT RESULT
-        # =========================
-        if "subject" in msg or "all result" in msg:
-            if subjects:
-                result = ", ".join([f"{s[0]}: {s[1]}" for s in subjects])
+            if intent == "weak_subjects":
                 return jsonify({
-                    "message": f"{name} subjects → {result}"
-                })
-            else:
-                return jsonify({
-                    "message": f"{name} has no subject data"
+                    "message": f"{name} weak subjects: {', '.join(weak)}" if weak else f"{name} has no weak subjects"
                 })
 
-        # =========================
-        # CGPA QUERY
-        # =========================
-        if "cgpa" in msg or "result" in msg:
-            return jsonify({
-                "message": f"{name} → CGPA: {predicted}, Needed: {needed}"
-            })
+            if intent in ["student_result", "student_cgpa"]:
+                subject_str = ", ".join([f"{s[0]}: {s[1]}" for s in subjects]) if subjects else "No data"
+                return jsonify({
+                    "message": f"**{name}**\nCGPA: {predicted} | Need: {needed} more\nSubjects: {subject_str}"
+                })
 
-        # =========================
-        # WEAK SUBJECT
-        # =========================
-        if "weak" in msg or "focus" in msg:
-            return jsonify({
-                "message": f"{name} weak subjects: {', '.join(weak)}"
-                if weak else f"{name} has no weak subjects"
-            })
+            # default
+            return jsonify({"message": f"{name} → CGPA: {predicted}, Needed: {needed}"})
 
-        # =========================
-        # DEFAULT RESPONSE
-        # =========================
-        return jsonify({
-            "message": f"{name} → CGPA: {predicted}, Needed: {needed}"
-        })
+        return jsonify({"message": "NOT_STUDENT_QUERY"})
 
-    # =========================
-    # 4️⃣ NOT STUDENT QUERY
-    # =========================
-    return jsonify({
-        "message": "NOT_STUDENT_QUERY"
-    })
-
+    except Exception as e:
+        conn.rollback()
+        print("Error:", e)
+        return jsonify({"message": f"Error: {str(e)}"}), 500
 
 
 # app.py তে semester route এ cursor problem হতে পারে
