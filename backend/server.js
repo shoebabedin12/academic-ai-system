@@ -11,7 +11,7 @@ app.use(express.json());
 
 const PORT = 5000;
 
-const PYTHON_URL = process.env.PYTHON_URL || "http://127.0.0.1:6000/chat";
+const PYTHON_URL = `${process.env.PYTHON_URL}/chat` || "http://127.0.0.1:6000/chat";
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
 app.post("/tool/chat-query", async (req, res) => {
