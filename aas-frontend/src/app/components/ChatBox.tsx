@@ -15,6 +15,8 @@ export default function ChatBox() {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const [chartStudent, setChartStudent] = useState("");
+  const [chartSemesters, setChartSemesters] = useState([]);
+
 
 
   // Load messages from localStorage
@@ -93,8 +95,9 @@ export default function ChatBox() {
       });
       const data = await res.json();
 
-      if (data.student) {
+      if (data.student && data.semesters) {
         setChartStudent(data.student);
+        setChartSemesters(data.semesters);
       }
 
       // Start typing animation for bot
@@ -229,8 +232,6 @@ export default function ChatBox() {
             </div>
           </div>
         )}
-
-        {chartStudent && <SemesterChart studentName={chartStudent} />}
       </div>
 
       {/* INPUT */}
@@ -273,6 +274,9 @@ export default function ChatBox() {
           Send
         </button>
       </div>
+      {chartStudent && (
+        <SemesterChart studentName={chartStudent} semesters={chartSemesters} />
+      )}
     </div>
   );
 }
